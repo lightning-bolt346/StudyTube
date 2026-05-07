@@ -1171,73 +1171,41 @@ window.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <script>
-document.addEventListener('yt-navigate-finish', () => {
-    console.log("Page changed");
-});
-
+// ✅ Improve all YouTube iframes
 (function () {
-    const forceSkip = () => {
-        const player = document.getElementById('movie_player');
-        const video = document.querySelector('video');
-
-        if (player && player.classList.contains('ad-showing')) {
-            if (video && isFinite(video.duration)) {
-                video.muted = true;
-                video.playbackRate = 16;
-                video.currentTime = video.duration - 0.05;
-            }
-
-            const skipSelectors = [
-                '.ytp-ad-skip-button',
-                '.ytp-ad-skip-button-modern',
-                '.ytp-skip-ad-button',
-                '.ytp-ad-skip-button-slot',
-                'button[id^="skip-button"]'
-            ];
-
-            skipSelectors.forEach(selector => {
-                const btn = document.querySelector(selector);
-                if (btn) {
-                    ['mousedown', 'mouseup', 'click'].forEach(type => {
-                        btn.dispatchEvent(new MouseEvent(type, {
-                            view: window,
-                            bubbles: true,
-                            cancelable: true,
-                            buttons: 1
-                        }));
-                    });
-                }
-            });
-        }
-
-        document.querySelectorAll('ytd-ad-slot-renderer, #masthead-ad')
-            .forEach(el => el.remove());
-
-        document.querySelectorAll(`
-            ad-avatar-lockup-view-model,
-            ad-button-view-model,
-            .ytwPanelAdHeaderImageLockupViewModelHost,
-            .ytwAdAvatarLockupViewModelHost,
-            .ytwAdBadgeViewModelHost,
-            [aria-label*="Sponsored"]
-        `).forEach(el => {
-            const parent = el.closest('ytd-rich-item-renderer, ytd-video-renderer, ytd-item-section-renderer, ytd-display-ad-renderer, div');
-            if (parent) parent.remove();
-            else el.remove();
+    const upgradeIframes = () => {
+        document.querySelectorAll('iframe[src*="youtube.com/embed"]').forEach(iframe => {
+            try {
+                let url = new URL(iframe.src);
+                url.searchParams.set('autoplay', '1');
+                url.searchParams.set('rel', '0');
+                url.searchParams.set('modestbranding', '1');
+                url.searchParams.set('iv_load_policy', '3');
+                url.searchParams.set('playsinline', '1');
+                url.searchParams.set('mute', '1');
+                iframe.src = url.toString();
+            } catch (e) {}
         });
-
-        document.querySelectorAll('*').forEach(el => {
-            if (el.innerText && el.innerText.includes('Sponsored')) {
-                el.closest('ytd-rich-item-renderer, ytd-video-renderer, div')?.remove();
-            }
-        });
-
-        requestAnimationFrame(forceSkip);
     };
 
-    forceSkip();
+    // ✅ Lightweight ad cleaner (iframe-safe)
+    const cleanAds = () => {
 
-    console.log("AD-KILLER V3 ACTIVE");
+        document.querySelectorAll('[aria-label*="Sponsored"], [id*="ad"], [class*="ad"]')
+            .forEach(el => {
+                if (!el.closest('iframe')) el.remove();
+            });
+
+        document.querySelectorAll('.ytp-ad-overlay-container, .video-ads')
+            .forEach(el => el.remove());
+
+        requestAnimationFrame(cleanAds);
+    };
+
+    upgradeIframes();
+    cleanAds();
+
+    console.log("✅ PRO ADBLOCK (IFRAME SAFE) ACTIVE");
 })();
 </script>
 
