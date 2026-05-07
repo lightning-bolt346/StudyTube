@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StudyTube – Satyam's Learning Studio</title>
+<style>
+  :root {
+    --bg: #0f0f13;
+    --surface: #1a1a24;
+    --surface2: #22222f;
+    --border: #2e2e42;
+    --accent: #6c63ff;
+    --accent2: #ff6584;
+    --text: #e8e8f0;
+    --muted: #888;
+    --success: #4caf50;
+    --warning: #ff9800;
+    --editor-bg: #16161e;
+    --toolbar-bg: #1e1e2e;
+    --font: 'Segoe UI', system-ui, sans-serif;
+    --radius: 10px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.4);
+    --split: 55%;
+  }
+  [data-theme="light"] {
+    --bg: #f5f5fa;
+    --surface: #ffffff;
+    --surface2: #f0f0f8;
+    --border: #d0d0e0;
+    --text: #1a1a2e;
+    --muted: #666;
+    --editor-bg: #fafafa;
+    --toolbar-bg: #f0f0f8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+  #topbar {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 8px 14px; flex-shrink: 0; flex-wrap: wrap;
+  }
+  #topbar .logo { font-weight: 700; font-size: 1.1rem; color: var(--accent); white-space: nowrap; }
+  #topbar .logo span { color: var(--accent2); }
+  #url-input {
+    flex: 1; min-width: 220px; padding: 7px 12px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 20px; color: var(--text); font-size: 0.9rem; outline: none;
+  }
+  #url-input:focus { border-color: var(--accent); }
+  .btn {
+    padding: 7px 14px; border-radius: 20px; border: none; cursor: pointer;
+    font-size: 0.85rem; font-weight: 600; transition: 0.2s;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #5a52e0; }
+  .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-ghost:hover { background: var(--border); }
+  .btn-success { background: var(--success); color: #fff; }
+  .btn-success:hover { background: #388e3c; }
+
+  #main { display: flex; flex: 1; overflow: hidden; position: relative; }
+
+  #video-panel {
+    width: var(--split); flex-shrink: 0; display: flex; flex-direction: column;
+    background: #000; position: relative; overflow: hidden;
+  }
+  #player-wrapper {
+    position: relative; width: 100%; padding-bottom: 56.25%; background: #000; flex-shrink: 0;
+  }
+  #player-wrapper iframe, #player-wrapper #yt-player {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;
+  }
+  #placeholder {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: var(--surface2); color: var(--muted); font-size: 1rem; gap: 10px;
+  }
+
+  #vid-controls {
+    display: flex; align-items: center; gap: 8px; padding: 6px 10px;
+    background: var(--surface); border-top: 1px solid var(--border); flex-wrap: wrap;
+  }
+  #vid-controls input[type=range] { flex: 1; min-width: 80px; accent-color: var(--accent); }
+  .speed-btn { font-size: 0.75rem; padding: 3px 8px; }
+
+  #video-info {
+    padding: 8px 12px; background: var(--surface); border-top: 1px solid var(--border);
+    font-size: 0.8rem; color: var(--muted); flex-shrink: 0;
+  }
+  #video-title-display { color: var(--text); font-weight: 600; font-size: 0.9rem; }
+
+  #ask-panel {
+    flex: 1; overflow-y: auto; background: var(--surface); border-top: 1px solid var(--border);
+    display: flex; flex-direction: column;
+  }
+  #ask-tabs { display: flex; border-bottom: 1px solid var(--border); }
+  .ask-tab {
+    padding: 7px 14px; cursor: pointer; font-size: 0.82rem; font-weight: 600;
+    color: var(--muted); border-bottom: 2px solid transparent; transition: 0.2s;
+  }
+  .ask-tab.active { color: var(--accent); border-color: var(--accent); }
+  #ask-content { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+
+  #tab-ai { display: flex; flex-direction: column; flex: 1; }
+  #ai-messages { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; min-height: 60px; }
+  .msg { padding: 8px 12px; border-radius: 8px; font-size: 0.82rem; line-height: 1.5; max-width: 92%; }
+  .msg.user { background: var(--accent); color: #fff; align-self: flex-end; }
+  .msg.ai { background: var(--surface2); color: var(--text); align-self: flex-start; border: 1px solid var(--border); }
+  .msg.sys { background: var(--surface2); color: var(--muted); align-self: center; font-style: italic; font-size: 0.75rem; }
+  #ai-input-row { display: flex; gap: 6px; padding: 8px; border-top: 1px solid var(--border); }
+  #ai-input { flex: 1; padding: 6px 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 0.82rem; outline: none; }
+  #ai-input:focus { border-color: var(--accent); }
+
+  #timestamps-list { padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .ts-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 10px; background: var(--surface2); border-radius: 8px;
+    font-size: 0.8rem; cursor: pointer; border: 1px solid transparent;
+  }
+  .ts-item:hover { border-color: var(--accent); }
+  .ts-time { color: var(--accent); font-weight: 700; font-size: 0.75rem; font-family: monospace; }
+  .ts-note { color: var(--text); flex: 1; }
+  .ts-del { color: var(--accent2); background: none; border: none; cursor: pointer; font-size: 1rem; }
+
+  #resizer {
+    width: 5px; background: var(--border); cursor: col-resize; flex-shrink: 0;
+    transition: background 0.2s; position: relative; z-index: 10;
+  }
+  #resizer:hover, #resizer.dragging { background: var(--accent); }
+
+  #notes-panel { flex: 1; display: flex; flex-direction: column; background: var(--editor-bg); overflow: hidden; }
+  #notes-header {
+    display: flex; align-items: center; gap: 8px; padding: 7px 12px;
+    background: var(--toolbar-bg); border-bottom: 1px solid var(--border); flex-wrap: wrap;
+  }
+  #notes-title-input {
+    flex: 1; min-width: 140px; padding: 5px 10px; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 8px; color: var(--text);
+    font-size: 0.88rem; font-weight: 600; outline: none;
+  }
+  #notes-title-input:focus { border-color: var(--accent); }
+
+  #editor-toolbar {
+    display: flex; flex-wrap: wrap; gap: 3px; padding: 6px 10px;
+    background: var(--toolbar-bg); border-bottom: 1px solid var(--border);
+  }
+  .tb-btn {
+    padding: 4px 8px; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 5px; color: var(--text); cursor: pointer; font-size: 0.78rem;
+    transition: 0.15s; white-space: nowrap;
+  }
+  .tb-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .tb-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .tb-sep { width: 1px; background: var(--border); margin: 0 3px; }
+  .tb-select {
+    padding: 4px 6px; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 5px; color: var(--text); font-size: 0.78rem; cursor: pointer; outline: none;
+  }
+  .tb-color { width: 26px; height: 26px; border-radius: 5px; border: 1px solid var(--border); cursor: pointer; padding: 1px; }
+
+  #editor-container { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+  #editor-tabs { display: flex; border-bottom: 1px solid var(--border); background: var(--toolbar-bg); }
+  .edit-tab {
+    padding: 6px 14px; cursor: pointer; font-size: 0.8rem; font-weight: 600;
+    color: var(--muted); border-bottom: 2px solid transparent; transition: 0.2s;
+  }
+  .edit-tab.active { color: var(--accent); border-color: var(--accent); }
+  #editor-area { flex: 1; overflow: auto; display: flex; flex-direction: column; }
+  #editor-row { display: flex; flex: 1; overflow: hidden; }
+  #editor {
+    flex: 1; width: 100%; padding: 16px; font-family: var(--font);
+    font-size: 16px; line-height: 1.7; background: var(--editor-bg); color: var(--text);
+    outline: none; border: none; resize: none;
+  }
+  #preview {
+    flex: 1; padding: 16px; font-size: 0.9rem; line-height: 1.7;
+    color: var(--text); display: none; overflow: auto; border-left: 1px solid var(--border);
+  }
+  #preview h1 { font-size: 1.5em; border-bottom: 2px solid var(--accent); padding-bottom: 5px; margin-bottom: 10px; }
+  #preview h2 { font-size: 1.25em; color: var(--accent); margin: 12px 0 6px; }
+  #preview h3 { font-size: 1.05em; color: var(--accent2); margin: 10px 0 5px; }
+  #preview h4 { font-size: 0.95em; color: var(--warning); margin: 8px 0 4px; }
+  #preview strong { color: #ffd700; }
+  #preview em { color: #b0c4ff; }
+  #preview del { color: var(--muted); }
+  #preview code { background: var(--surface2); padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 0.85em; color: #7ec8e3; }
+  #preview pre { background: var(--surface2); padding: 12px; border-radius: 8px; overflow-x: auto; border-left: 3px solid var(--accent); margin: 8px 0; }
+  #preview pre code { background: none; padding: 0; color: #7ec8e3; }
+  #preview blockquote { border-left: 3px solid var(--accent2); padding: 8px 14px; background: var(--surface2); margin: 8px 0; border-radius: 0 8px 8px 0; color: var(--muted); font-style: italic; }
+  #preview ul, #preview ol { padding-left: 20px; margin: 6px 0; }
+  #preview li { margin: 3px 0; }
+  #preview hr { border: none; border-top: 1px solid var(--border); margin: 14px 0; }
+  #preview a { color: var(--accent); }
+  #preview table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 0.85rem; }
+  #preview th { background: var(--accent); color: #fff; padding: 6px 10px; }
+  #preview td { padding: 6px 10px; border: 1px solid var(--border); }
+  #preview tr:nth-child(even) td { background: var(--surface2); }
+  #preview mark { background: #ffd70055; color: #ffd700; border-radius: 3px; padding: 0 3px; }
+  #preview img { max-width: 100%; border-radius: 6px; }
+  #preview input[type=checkbox] { margin-right: 5px; }
+
+  #statusbar {
+    display: flex; align-items: center; gap: 12px; padding: 4px 12px;
+    background: var(--toolbar-bg); border-top: 1px solid var(--border);
+    font-size: 0.72rem; color: var(--muted); flex-shrink: 0;
+  }
+  #autosave-status { color: var(--success); }
+
+  .modal-overlay {
+    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.7); z-index: 1000; align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 24px; min-width: 340px; max-width: 520px; width: 90%;
+    box-shadow: var(--shadow); position: relative; max-height: 90vh; overflow-y: auto;
+  }
+  .modal h2 { margin-bottom: 16px; font-size: 1.1rem; color: var(--accent); }
+  .modal-close { position: absolute; top: 12px; right: 14px; background: none; border: none; color: var(--muted); font-size: 1.2rem; cursor: pointer; }
+  .setting-row { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+  .setting-row label { font-size: 0.82rem; color: var(--muted); }
+  .setting-row input, .setting-row select {
+    padding: 7px 10px; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); font-size: 0.88rem; outline: none;
+  }
+  .setting-row input:focus, .setting-row select:focus { border-color: var(--accent); }
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .toggle-row span { font-size: 0.85rem; }
+  .toggle { position: relative; width: 42px; height: 22px; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--border); border-radius: 22px; cursor: pointer; transition: 0.3s; }
+  .toggle-slider:before { content: ''; position: absolute; width: 16px; height: 16px; border-radius: 50%; background: #fff; top: 3px; left: 3px; transition: 0.3s; }
+  input:checked + .toggle-slider { background: var(--accent); }
+  input:checked + .toggle-slider:before { transform: translateX(20px); }
+
+  #snackbar {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: var(--accent); color: #fff; padding: 10px 20px; border-radius: 20px;
+    font-size: 0.85rem; z-index: 9999; transition: transform 0.3s; pointer-events: none;
+  }
+  #snackbar.show { transform: translateX(-50%) translateY(0); }
+
+  body.focus-mode #video-panel { display: none; }
+  body.focus-mode #resizer { display: none; }
+
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+  @media (max-width: 700px) {
+    #main { flex-direction: column; }
+    #video-panel { width: 100% !important; height: 40%; flex-shrink: 0; }
+    #resizer { display: none; }
+    #notes-panel { flex: 1; }
+  }
+</style>
+</head>
+<body data-theme="dark">
+
+<div id="topbar">
+  <div class="logo">Study<span>Tube</span> 🎓</div>
+  <input id="url-input" type="text" placeholder="Paste YouTube URL or Video ID…" autocomplete="off" />
+  <button class="btn btn-primary" onclick="loadVideo()">▶ Load</button>
+  <button class="btn btn-ghost" onclick="stampTimestamp()" title="Bookmark current video time">🔖 Stamp</button>
+  <button class="btn btn-ghost" onclick="toggleFocusMode()">🎯 Focus</button>
+  <button class="btn btn-ghost" onclick="openSettings()">⚙️ Settings</button>
+  <button class="btn btn-success" onclick="saveNotes()">💾 Save Notes</button>
+</div>
+
+<div id="main">
+  <div id="video-panel">
+    <div id="player-wrapper">
+      <div id="placeholder">
+        <svg width="64" height="64" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.3"><path d="M10 16.5l6-4.5-6-4.5v9zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>
+        <span>Paste a YouTube URL above and click Load</span>
+      </div>
+    </div>
+
+    <div id="vid-controls">
+      <span style="font-size:0.75rem;color:var(--muted);">Speed:</span>
+      <button class="btn btn-ghost speed-btn" onclick="setSpeed(0.5)">0.5×</button>
+      <button class="btn btn-ghost speed-btn" onclick="setSpeed(0.75)">0.75×</button>
+      <button class="btn btn-ghost speed-btn" onclick="setSpeed(1)">1×</button>
+      <button class="btn btn-ghost speed-btn" onclick="setSpeed(1.25)">1.25×</button>
+      <button class="btn btn-ghost speed-btn" onclick="setSpeed(1.5)">1.5×</button>
+      <button class="btn btn-ghost speed-btn" onclick="setSpeed(2)">2×</button>
+      <div class="tb-sep" style="height:22px;"></div>
+      <span style="font-size:0.75rem;color:var(--muted);">Vol:</span>
+      <input type="range" id="vol-slider" min="0" max="100" value="100" oninput="setVolume(this.value)" style="max-width:80px;">
+    </div>
+
+    <div id="video-info">
+      <div id="video-title-display">No video loaded</div>
+      <div id="video-meta" style="margin-top:3px;font-size:0.75rem;"></div>
+    </div>
+
+    <div id="ask-panel">
+      <div id="ask-tabs">
+        <div class="ask-tab active" onclick="switchAskTab('ai',this)">💬 Ask AI</div>
+        <div class="ask-tab" onclick="switchAskTab('timestamps',this)">🔖 Timestamps</div>
+        <div class="ask-tab" onclick="switchAskTab('summary',this)">📋 Quick Notes</div>
+      </div>
+      <div id="ask-content">
+        <div id="tab-ai">
+          <div id="ai-messages">
+            <div class="msg sys">Ask anything about the video. I'll help you understand, summarize, or test your knowledge.</div>
+          </div>
+          <div id="ai-input-row">
+            <input id="ai-input" placeholder="Ask about the video…" onkeydown="if(event.key==='Enter')sendAI()" />
+            <button class="btn btn-primary" onclick="sendAI()" style="padding:6px 12px;">Send</button>
+          </div>
+        </div>
+        <div id="tab-timestamps" style="display:none;">
+          <div id="timestamps-list">
+            <div style="padding:10px;color:var(--muted);font-size:0.8rem;">Bookmarked timestamps appear here. Click to jump to that moment.</div>
+          </div>
+        </div>
+        <div id="tab-summary" style="display:none;padding:10px;">
+          <textarea id="quick-notes" style="width:100%;height:100px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px;font-size:0.82rem;resize:vertical;outline:none;" placeholder="Quick scratch notes while watching…"></textarea>
+          <button class="btn btn-ghost" style="margin-top:6px;font-size:0.78rem;width:100%;" onclick="insertQuickNote()">⬆ Push to Editor</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="resizer"></div>
+
+  <div id="notes-panel">
+    <div id="notes-header">
+      <span style="font-size:0.82rem;color:var(--muted);white-space:nowrap;">📝 Title:</span>
+      <input id="notes-title-input" type="text" placeholder="Enter notes title (used as filename)…" />
+      <button class="btn btn-ghost" onclick="clearEditor()" style="padding:5px 10px;font-size:0.78rem;">🗑 Clear</button>
+      <button class="btn btn-ghost" onclick="copyNotes()" style="padding:5px 10px;font-size:0.78rem;">📋 Copy</button>
+      <button class="btn btn-success" onclick="saveNotes()" style="padding:5px 10px;font-size:0.78rem;">💾 Save</button>
+    </div>
+
+    <div id="editor-toolbar">
+      <select class="tb-select" onchange="insertHeading(this.value);this.value=''">
+        <option value="">Headings</option>
+        <option value="h1"># H1</option>
+        <option value="h2">## H2</option>
+        <option value="h3">### H3</option>
+        <option value="h4">#### H4</option>
+      </select>
+      <div class="tb-sep" style="height:24px;"></div>
+      <button class="tb-btn" onclick="wrapText('**','**')" title="Bold"><b>B</b></button>
+      <button class="tb-btn" onclick="wrapText('*','*')" title="Italic"><i>I</i></button>
+      <button class="tb-btn" onclick="wrapText('~~','~~')" title="Strikethrough"><s>S</s></button>
+      <button class="tb-btn" onclick="wrapText('==','==')" title="Highlight" style="background:#ffd70033;">🖊 HL</button>
+      <button class="tb-btn" onclick="wrapText('`','`')" title="Inline Code" style="font-family:monospace;">&lt;/&gt;</button>
+      <div class="tb-sep" style="height:24px;"></div>
+      <button class="tb-btn" onclick="wrapText('&lt;span style=&quot;color:#ff6584&quot;&gt;','&lt;/span&gt;')" style="color:#ff6584;" title="Red">●</button>
+      <button class="tb-btn" onclick="wrapText('&lt;span style=&quot;color:#6c63ff&quot;&gt;','&lt;/span&gt;')" style="color:#6c63ff;" title="Purple">●</button>
+      <button class="tb-btn" onclick="wrapText('&lt;span style=&quot;color:#4caf50&quot;&gt;','&lt;/span&gt;')" style="color:#4caf50;" title="Green">●</button>
+      <button class="tb-btn" onclick="wrapText('&lt;span style=&quot;color:#ffd700&quot;&gt;','&lt;/span&gt;')" style="color:#ffd700;" title="Yellow">●</button>
+      <button class="tb-btn" onclick="wrapText('&lt;span style=&quot;color:#7ec8e3&quot;&gt;','&lt;/span&gt;')" style="color:#7ec8e3;" title="Blue">●</button>
+      <input type="color" class="tb-color" title="Custom color" onchange="applyCustomColor(this.value)" />
+      <div class="tb-sep" style="height:24px;"></div>
+      <button class="tb-btn" onclick="insertList('ul')">• List</button>
+      <button class="tb-btn" onclick="insertList('ol')">1. List</button>
+      <button class="tb-btn" onclick="insertList('task')">☑ Task</button>
+      <div class="tb-sep" style="height:24px;"></div>
+      <button class="tb-btn" onclick="insertBlock('quote')">❝ Quote</button>
+      <button class="tb-btn" onclick="insertBlock('code')">``` Code</button>
+      <button class="tb-btn" onclick="insertBlock('hr')">— HR</button>
+      <button class="tb-btn" onclick="insertTable()">⊞ Table</button>
+      <div class="tb-sep" style="height:24px;"></div>
+      <button class="tb-btn" onclick="insertBlock('link')">🔗 Link</button>
+      <button class="tb-btn" onclick="insertTimestampLink()">⏱ Time</button>
+      <button class="tb-btn" onclick="insertBlock('image')">🖼 Img</button>
+      <button class="tb-btn" onclick="insertDivider()">📌 Section</button>
+    </div>
+
+    <div id="editor-tabs">
+      <div class="edit-tab active" onclick="switchEditorTab('write',this)">✏️ Write</div>
+      <div class="edit-tab" onclick="switchEditorTab('preview',this)">👁 Preview</div>
+      <div class="edit-tab" onclick="switchEditorTab('split',this)">⬜ Split</div>
+    </div>
+
+    <div id="editor-area">
+      <div id="editor-row">
+        <textarea id="editor" spellcheck="true" placeholder="Start writing your notes here…&#10;&#10;💡 Tip: Use the toolbar for formatting. Press Ctrl+S to save.&#10;🔖 Tip: Click Stamp to bookmark video moments into your notes." oninput="onEditorInput()"></textarea>
+        <div id="preview"></div>
+      </div>
+    </div>
+
+    <div id="statusbar">
+      <span>📝 <span id="word-count">0 words</span></span>
+      <span>🔤 <span id="char-count">0 chars</span></span>
+      <span>📄 <span id="line-count">1 line</span></span>
+      <span id="autosave-status">💾 Not saved</span>
+      <div style="flex:1;"></div>
+      <span id="current-time-display">⏱ 0:00</span>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeSettings()">✕</button>
+    <h2>⚙️ Settings</h2>
+    <div class="setting-row">
+      <label>📁 Save Path (for your reference)</label>
+      <input id="save-path" type="text" placeholder="e.g. C:\Users\Satyam\Notes\" />
+    </div>
+    <div class="setting-row">
+      <label>📝 Default Note Template</label>
+      <select id="default-template">
+        <option value="blank">Blank</option>
+        <option value="lecture">Lecture Notes</option>
+        <option value="cornell">Cornell Method</option>
+        <option value="feynman">Feynman Technique</option>
+      </select>
+    </div>
+    <div class="setting-row">
+      <label>🔤 Editor Font Size</label>
+      <select id="font-size-setting">
+        <option value="14px">Small (14px)</option>
+        <option value="16px" selected>Medium (16px)</option>
+        <option value="18px">Large (18px)</option>
+        <option value="20px">Extra Large (20px)</option>
+      </select>
+    </div>
+    <div class="toggle-row">
+      <span>🌙 Dark Mode</span>
+      <label class="toggle"><input type="checkbox" id="dark-mode-toggle" checked onchange="toggleTheme()"><span class="toggle-slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <span>🚫 Auto-Skip Ads</span>
+      <label class="toggle"><input type="checkbox" id="ad-skip-toggle" checked><span class="toggle-slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <span>💾 Auto-Save every 30s</span>
+      <label class="toggle"><input type="checkbox" id="autosave-toggle" checked><span class="toggle-slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <span>📋 Auto-fill title from video</span>
+      <label class="toggle"><input type="checkbox" id="auto-title-toggle" checked><span class="toggle-slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <span>🕒 Show video time in status bar</span>
+      <label class="toggle"><input type="checkbox" id="show-time-toggle" checked><span class="toggle-slider"></span></label>
+    </div>
+    <button class="btn btn-primary" onclick="saveSettings()" style="width:100%;margin-top:8px;">✅ Save Settings</button>
+  </div>
+</div>
+
+<div id="snackbar"></div>
+
+<script>
+// ══════════════════════════════════════════
+// YOUTUBE PLAYER
+// ══════════════════════════════════════════
+var player = null;
+var ytReady = false;
+var currentVideoId = '';
+var adSkipInterval = null;
+
+function extractVideoId(url) {
+  url = (url || '').trim();
+  var patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
+    /^([a-zA-Z0-9_-]{11})$/
+  ];
+  
+  for (var i = 0; i < patterns.length; i++) {
+    var m = url.match(patterns[i]);
+    if (m) return m[1]; // fixed
+  }
+  
+  return '';
+}
+window.onYouTubeIframeAPIReady = function() {
+  ytReady = true;
+  if (currentVideoId) initPlayer(currentVideoId);
+};
+
+(function() {
+  var tag = document.createElement('script');
+  tag.src = 'https://www.youtube.com/iframe_api';
+  document.head.appendChild(tag);
+})();
+
+function initPlayer(videoId) {
+  var placeholder = document.getElementById('placeholder');
+  if (placeholder) placeholder.style.display = 'none';
+
+  if (player && player.loadVideoById) {
+    player.loadVideoById(videoId);
+    return;
+  }
+
+  var el = document.getElementById('yt-player');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'yt-player';
+    document.getElementById('player-wrapper').appendChild(el);
+  }
+
+  player = new YT.Player('yt-player', {
+    videoId: videoId,
+    playerVars: { autoplay: 1, rel: 0, modestbranding: 1, enablejsapi: 1, playsinline: 1 },
+    events: {
+      onReady: onPlayerReady,
+      onStateChange: onPlayerStateChange,
+      onError: function() { showSnack('⚠️ Could not load video. Check the URL.'); }
+    }
+  });
+}
+
+function onPlayerReady(e) {
+  startAdSkipper();
+  startTimeDisplay();
+  setTimeout(function() {
+    try {
+      var data = player.getVideoData();
+      if (data && data.title) {
+        document.getElementById('video-title-display').textContent = data.title;
+        if (document.getElementById('auto-title-toggle').checked &&
+            !document.getElementById('notes-title-input').value) {
+          document.getElementById('notes-title-input').value = sanitizeFilename(data.title);
+        }
+        if (!document.getElementById('editor').value.trim()) {
+          applyTemplate(data.title);
+        }
+      }
+    } catch(err) {}
+  }, 1500);
+}
+
+function onPlayerStateChange(e) {}
+
+function loadVideo() {
+  var input = document.getElementById('url-input').value;
+  var vid = extractVideoId(input);
+  if (!vid) { showSnack('⚠️ Invalid YouTube URL or Video ID'); return; }
+  currentVideoId = vid;
+  localStorage.setItem('studytube_last_url', input);
+  if (ytReady) {
+    initPlayer(vid);
+  } else {
+    var check = setInterval(function() {
+      if (ytReady) { clearInterval(check); initPlayer(vid); }
+    }, 200);
+  }
+  showSnack('🎬 Loading video…');
+}
+
+// ══════════════════════════════════════════
+// AD SKIPPER
+// ══════════════════════════════════════════
+function startAdSkipper() {
+  if (adSkipInterval) clearInterval(adSkipInterval);
+  adSkipInterval = setInterval(function() {
+    if (!document.getElementById('ad-skip-toggle').checked) return;
+    if (!player || typeof player.getDuration !== 'function') return;
+    try {
+      var dur = player.getDuration();
+      var state = player.getPlayerState();
+      // Short duration = likely an ad: seek to end
+      if (state === 1 && dur > 0 && dur < 32) {
+        player.seekTo(dur - 0.1, true);
+      }
+    } catch(e) {}
+  }, 700);
+}
+
+function setSpeed(s) {
+  if (player && player.setPlaybackRate) player.setPlaybackRate(s);
+  document.querySelectorAll('.speed-btn').forEach(function(b) { b.classList.remove('active'); });
+  event.target.classList.add('active');
+  showSnack('▶ Speed: ' + s + '×');
+}
+
+function setVolume(v) {
+  if (player && player.setVolume) player.setVolume(parseInt(v));
+}
+
+// ══════════════════════════════════════════
+// TIME DISPLAY
+// ══════════════════════════════════════════
+var timeInterval = null;
+function startTimeDisplay() {
+  if (timeInterval) clearInterval(timeInterval);
+  timeInterval = setInterval(function() {
+    if (!document.getElementById('show-time-toggle').checked) return;
+    if (!player || typeof player.getCurrentTime !== 'function') return;
+    try {
+      document.getElementById('current-time-display').textContent = '⏱ ' + formatTime(player.getCurrentTime());
+    } catch(e) {}
+  }, 1000);
+}
+
+function formatTime(s) {
+  s = Math.floor(s || 0);
+  var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+  if (h > 0) return h + ':' + pad(m) + ':' + pad(sec);
+  return m + ':' + pad(sec);
+}
+function pad(n) { return n < 10 ? '0' + n : '' + n; }
+
+// ══════════════════════════════════════════
+// TIMESTAMPS
+// ══════════════════════════════════════════
+var timestamps = [];
+
+function stampTimestamp() {
+  if (!player || typeof player.getCurrentTime !== 'function') {
+    showSnack('⚠️ Load a video first'); return;
+  }
+  var t = player.getCurrentTime();
+  var note = prompt('Label for timestamp ' + formatTime(t) + ':', '') || '(no label)';
+  timestamps.push({ time: t, label: note });
+  renderTimestamps();
+  insertAtCursor('\n> 🔖 **[' + formatTime(t) + ']** – ' + note + '\n');
+  showSnack('🔖 Timestamp added at ' + formatTime(t));
+}
+
+function renderTimestamps() {
+  var list = document.getElementById('timestamps-list');
+  if (timestamps.length === 0) {
+    list.innerHTML = '<div style="padding:10px;color:var(--muted);font-size:0.8rem;">No timestamps yet.</div>';
+    return;
+  }
+  list.innerHTML = timestamps.map(function(ts, i) {
+    return '<div class="ts-item" onclick="seekToTime(' + ts.time + ')">' +
+      '<span class="ts-time">' + formatTime(ts.time) + '</span>' +
+      '<span class="ts-note">' + escapeHtml(ts.label) + '</span>' +
+      '<button class="ts-del" onclick="event.stopPropagation();deleteTs(' + i + ')" title="Delete">✕</button>' +
+      '</div>';
+  }).join('');
+}
+
+function seekToTime(t) {
+  if (player && player.seekTo) { player.seekTo(t, true); player.playVideo(); }
+}
+function deleteTs(i) { timestamps.splice(i, 1); renderTimestamps(); }
+
+function insertTimestampLink() {
+  if (!player || typeof player.getCurrentTime !== 'function') { showSnack('⚠️ Load a video first'); return; }
+  var t = player.getCurrentTime();
+  insertAtCursor('[⏱ ' + formatTime(t) + '](https://youtu.be/' + currentVideoId + '?t=' + Math.floor(t) + ') ');
+}
+
+// ══════════════════════════════════════════
+// EDITOR
+// ══════════════════════════════════════════
+function getEditor() { return document.getElementById('editor'); }
+
+function insertAtCursor(text) {
+  var ed = getEditor();
+  var s = ed.selectionStart, e = ed.selectionEnd;
+  ed.value = ed.value.substring(0, s) + text + ed.value.substring(e);
+  ed.selectionStart = ed.selectionEnd = s + text.length;
+  ed.focus();
+  onEditorInput();
+}
+
+function wrapText(before, after) {
+  var ed = getEditor();
+  var s = ed.selectionStart, e = ed.selectionEnd;
+  var sel = ed.value.substring(s, e) || 'text';
+  var wrapped = before + sel + after;
+  ed.value = ed.value.substring(0, s) + wrapped + ed.value.substring(e);
+  ed.selectionStart = s + before.length;
+  ed.selectionEnd = s + before.length + sel.length;
+  ed.focus();
+  onEditorInput();
+}
+
+function applyCustomColor(color) {
+  wrapText('<span style="color:' + color + '">', '</span>');
+}
+
+function insertHeading(level) {
+  var map = { h1: '# ', h2: '## ', h3: '### ', h4: '#### ' };
+  if (!map[level]) return;
+  var ed = getEditor();
+  var pos = ed.selectionStart;
+  var lineStart = ed.value.lastIndexOf('\n', pos - 1) + 1;
+  ed.value = ed.value.substring(0, lineStart) + map[level] + ed.value.substring(lineStart);
+  ed.focus();
+  onEditorInput();
+}
+
+function insertList(type) {
+  var ed = getEditor();
+  var sel = ed.value.substring(ed.selectionStart, ed.selectionEnd);
+  var result = '';
+  if (sel) {
+    result = sel.split('\n').map(function(l, i) {
+      if (type === 'ul') return '- ' + l;
+      if (type === 'ol') return (i + 1) + '. ' + l;
+      return '- [ ] ' + l;
+    }).join('\n');
+  } else {
+    if (type === 'ul') result = '- Item 1\n- Item 2\n- Item 3';
+    else if (type === 'ol') result = '1. Item 1\n2. Item 2\n3. Item 3';
+    else result = '- [ ] Task 1\n- [ ] Task 2\n- [x] Done Task';
+  }
+  insertAtCursor('\n' + result + '\n');
+}
+
+function insertBlock(type) {
+  if (type === 'quote') insertAtCursor('\n> Your quote here\n');
+  else if (type === 'code') insertAtCursor('\n```\ncode here\n```\n');
+  else if (type === 'hr') insertAtCursor('\n---\n');
+  else if (type === 'link') {
+    var url = prompt('Enter URL:', 'https://');
+    var label = prompt('Link label:', 'Click here');
+    if (url) insertAtCursor('[' + (label || url) + '](' + url + ')');
+  } else if (type === 'image') {
+    var iurl = prompt('Image URL:', 'https://');
+    var alt = prompt('Alt text:', 'Image');
+    if (iurl) insertAtCursor('\n![' + alt + '](' + iurl + ')\n');
+  }
+}
+
+function insertTable() {
+  var rows = parseInt(prompt('Number of rows (excluding header):', '3') || '3');
+  var cols = parseInt(prompt('Number of columns:', '3') || '3');
+  var headers = [];
+  for (var i = 0; i < cols; i++) headers.push('Header ' + (i + 1));
+  var table = '\n| ' + headers.join(' | ') + ' |\n';
+  table += '| ' + new Array(cols).fill('---').join(' | ') + ' |\n';
+  for (var r = 0; r < rows; r++) {
+    table += '| ' + new Array(cols).fill('Cell').join(' | ') + ' |\n';
+  }
+  insertAtCursor(table);
+}
+
+function insertDivider() {
+  insertAtCursor('\n\n---\n## 📌 Section\n\n');
+}
+
+function insertQuickNote() {
+  var qn = document.getElementById('quick-notes').value.trim();
+  if (!qn) return;
+  insertAtCursor('\n> 💡 ' + qn + '\n');
+  document.getElementById('quick-notes').value = '';
+  showSnack('✅ Quick note pushed to editor');
+}
+
+// ══════════════════════════════════════════
+// MARKDOWN PARSER
+// ══════════════════════════════════════════
+function parseMarkdown(md) {
+  var html = md
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/```([\w]*)\n([\s\S]*?)```/gm, function(_, lang, code) {
+      return '<pre><code>' + code + '</code></pre>';
+    })
+    .replace(/`([^`\n]+)`/g, '<code>$1</code>')
+    .replace(/^#### (.+)$/gm, '<h4>$1</h4>')
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+    .replace(/^---$/gm, '<hr>')
+    .replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>')
+    .replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/~~(.+?)~~/g, '<del>$1</del>')
+    .replace(/==(.+?)==/g, '<mark>$1</mark>')
+    .replace(/&lt;mark&gt;(.+?)&lt;\/mark&gt;/g, '<mark>$1</mark>')
+    .replace(/&lt;span style=&quot;color:([^&"]+)&quot;&gt;([\s\S]+?)&lt;\/span&gt;/g,
+      '<span style="color:$1">$2</span>')
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
+    .replace(/^- \[x\] (.+)$/gm, '<li><input type="checkbox" checked disabled> $1</li>')
+    .replace(/^- \[ \] (.+)$/gm, '<li><input type="checkbox" disabled> $1</li>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    .replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+
+  // Wrap consecutive <li> in <ul>
+  html = html.replace(/(<li>[\s\S]*?<\/li>\n?)+/g, function(m) {
+    return '<ul>' + m + '</ul>';
+  });
+
+  // Simple table
+  html = html.replace(/\|(.+)\|\n\|[-| :]+\|\n((?:\|.+\|\n?)+)/g, function(match, header, bodyRows) {
+    var ths = header.split('|').filter(Boolean).map(function(h) {
+      return '<th>' + h.trim() + '</th>';
+    }).join('');
+    var trs = bodyRows.trim().split('\n').map(function(row) {
+      var tds = row.split('|').filter(Boolean).map(function(c) {
+        return '<td>' + c.trim() + '</td>';
+      }).join('');
+      return '<tr>' + tds + '</tr>';
+    }).join('');
+    return '<table><thead><tr>' + ths + '</tr></thead><tbody>' + trs + '</tbody></table>';
+  });
+
+  html = html.replace(/\n\n+/g, '</p><p>').replace(/\n/g, '<br>');
+  return '<p>' + html + '</p>';
+}
+
+function updatePreview() {
+  document.getElementById('preview').innerHTML = parseMarkdown(document.getElementById('editor').value);
+}
+
+// ══════════════════════════════════════════
+// EDITOR TABS
+// ══════════════════════════════════════════
+var editorMode = 'write';
+function switchEditorTab(mode, el) {
+  editorMode = mode;
+  document.querySelectorAll('.edit-tab').forEach(function(t) { t.classList.remove('active'); });
+  el.classList.add('active');
+  var ed = document.getElementById('editor');
+  var pv = document.getElementById('preview');
+  if (mode === 'write') {
+    ed.style.display = 'block'; ed.style.flex = '1';
+    pv.style.display = 'none';
+  } else if (mode === 'preview') {
+    ed.style.display = 'none';
+    pv.style.display = 'block'; pv.style.flex = '1';
+    updatePreview();
+  } else {
+    ed.style.display = 'block'; ed.style.flex = '1';
+    pv.style.display = 'block'; pv.style.flex = '1';
+    updatePreview();
+  }
+}
+
+function onEditorInput() {
+  var val = document.getElementById('editor').value;
+  var words = val.trim() ? val.trim().split(/\s+/).length : 0;
+  document.getElementById('word-count').textContent = words + ' words';
+  document.getElementById('char-count').textContent = val.length + ' chars';
+  document.getElementById('line-count').textContent = val.split('\n').length + ' lines';
+  if (editorMode !== 'write') updatePreview();
+  scheduleAutoSave();
+}
+
+// ══════════════════════════════════════════
+// SAVE NOTES
+// ══════════════════════════════════════════
+var autoSaveTimer = null;
+function scheduleAutoSave() {
+  if (!document.getElementById('autosave-toggle').checked) return;
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(function() {
+    var title = document.getElementById('notes-title-input').value || 'untitled';
+    localStorage.setItem('studytube_notes_' + title, document.getElementById('editor').value);
+    localStorage.setItem('studytube_last_title', title);
+    document.getElementById('autosave-status').textContent = '💾 Auto-saved ' + new Date().toLocaleTimeString();
+  }, 30000);
+}
+
+function saveNotes() {
+  var title = (document.getElementById('notes-title-input').value.trim() || 'MyNotes');
+  var content = document.getElementById('editor').value;
+  var filename = sanitizeFilename(title) + '.md';
+  var blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+  document.getElementById('autosave-status').textContent = '💾 Saved: ' + filename;
+  localStorage.setItem('studytube_notes_' + title, content);
+  localStorage.setItem('studytube_last_title', title);
+  showSnack('✅ Saved as "' + filename + '"');
+}
+
+function sanitizeFilename(name) {
+  return name.replace(/[<>:"/\\|?*\x00-\x1F]/g, '_').replace(/\s+/g, '_').substring(0, 100);
+}
+
+function clearEditor() {
+  if (!confirm('Clear all notes? This cannot be undone.')) return;
+  document.getElementById('editor').value = '';
+  onEditorInput();
+}
+
+function copyNotes() {
+  navigator.clipboard.writeText(document.getElementById('editor').value)
+    .then(function() { showSnack('📋 Notes copied to clipboard!'); });
+}
+
+// ══════════════════════════════════════════
+// TEMPLATES
+// ══════════════════════════════════════════
+function applyTemplate(title) {
+  var tpl = document.getElementById('default-template').value;
+  var date = new Date().toLocaleDateString('en-IN', { dateStyle: 'long' });
+  var templates = {
+    blank: '# ' + title + '\n\n📅 *' + date + '*\n\n',
+    lecture: '# ' + title + '\n\n📅 *' + date + '*\n\n## 🎯 Key Concepts\n\n- \n\n## 📝 Notes\n\n\n\n## ❓ Questions\n\n- \n\n## 💡 Takeaways\n\n- ',
+    cornell: '# ' + title + '\n\n📅 *' + date + '*\n\n---\n\n| **Questions / Keywords** | **Notes** |\n| --- | --- |\n| | |\n| | |\n\n---\n\n## 📋 Summary\n\n',
+    feynman: '# ' + title + '\n\n📅 *' + date + '*\n\n## 🧠 Concept (simple words)\n\n> Explain it as if teaching a 12-year-old.\n\n\n\n## 🕳 Gaps in understanding\n\n- \n\n## 🔁 Simplified Explanation\n\n'
+  };
+  document.getElementById('editor').value = templates[tpl] || templates.blank;
+  onEditorInput();
+}
+
+// ══════════════════════════════════════════
+// SETTINGS
+// ══════════════════════════════════════════
+function openSettings() { loadSettings(); document.getElementById('settings-modal').classList.add('open'); }
+function closeSettings() { document.getElementById('settings-modal').classList.remove('open'); }
+
+function loadSettings() {
+  try {
+    var s = JSON.parse(localStorage.getItem('studytube_settings') || '{}');
+    if (s.savePath) document.getElementById('save-path').value = s.savePath;
+    if (s.template) document.getElementById('default-template').value = s.template;
+    if (s.fontSize) { document.getElementById('font-size-setting').value = s.fontSize; document.getElementById('editor').style.fontSize = s.fontSize; }
+    if (s.darkMode !== undefined) { document.getElementById('dark-mode-toggle').checked = s.darkMode; applyTheme(s.darkMode); }
+    if (s.adSkip !== undefined) document.getElementById('ad-skip-toggle').checked = s.adSkip;
+    if (s.autoSave !== undefined) document.getElementById('autosave-toggle').checked = s.autoSave;
+    if (s.autoTitle !== undefined) document.getElementById('auto-title-toggle').checked = s.autoTitle;
+    if (s.showTime !== undefined) document.getElementById('show-time-toggle').checked = s.showTime;
+  } catch(e) {}
+}
+
+function saveSettings() {
+  var s = {
+    savePath: document.getElementById('save-path').value,
+    template: document.getElementById('default-template').value,
+    fontSize: document.getElementById('font-size-setting').value,
+    darkMode: document.getElementById('dark-mode-toggle').checked,
+    adSkip: document.getElementById('ad-skip-toggle').checked,
+    autoSave: document.getElementById('autosave-toggle').checked,
+    autoTitle: document.getElementById('auto-title-toggle').checked,
+    showTime: document.getElementById('show-time-toggle').checked
+  };
+  localStorage.setItem('studytube_settings', JSON.stringify(s));
+  document.getElementById('editor').style.fontSize = s.fontSize;
+  applyTheme(s.darkMode);
+  closeSettings();
+  showSnack('✅ Settings saved!');
+}
+
+function toggleTheme() { applyTheme(document.getElementById('dark-mode-toggle').checked); }
+function applyTheme(dark) { document.body.setAttribute('data-theme', dark ? 'dark' : 'light'); }
+
+// ══════════════════════════════════════════
+// ASK AI
+// ══════════════════════════════════════════
+function switchAskTab(tab, el) {
+  document.querySelectorAll('.ask-tab').forEach(function(t) { t.classList.remove('active'); });
+  el.classList.add('active');
+  document.getElementById('tab-ai').style.display = tab === 'ai' ? 'flex' : 'none';
+  document.getElementById('tab-timestamps').style.display = tab === 'timestamps' ? 'block' : 'none';
+  document.getElementById('tab-summary').style.display = tab === 'summary' ? 'block' : 'none';
+}
+
+function sendAI() {
+  var input = document.getElementById('ai-input');
+  var msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  var messages = document.getElementById('ai-messages');
+  messages.innerHTML += '<div class="msg user">' + escapeHtml(msg) + '</div>';
+
+  var studyPrompts = [
+    '💡 Try explaining this concept in your own words below.',
+    '📖 What are the 3 most important points from what you just watched?',
+    '🔗 How does this connect to something you already know?',
+    '❓ What question does this topic raise for you?',
+    '🧪 How would you test if you truly understand this?',
+    '🗂 Can you give a real-world example of this concept?',
+    '🔁 Try writing a one-paragraph summary without looking at your notes.'
+  ];
+
+  var randomPrompt = studyPrompts[Math.floor(Math.random() * studyPrompts.length)];
+  var title = document.getElementById('video-title-display').textContent;
+  var context = title !== 'No video loaded' ? ' (Video: "' + title + '")' : '';
+
+  messages.innerHTML += '<div class="msg ai">🤖 <strong>StudyBot' + context + ':</strong><br><br>' +
+    'I\'m running locally without an API key, so I can\'t answer directly — but here\'s a study prompt to help you think deeper:<br><br>' +
+    '<strong>' + randomPrompt + '</strong><br><br>' +
+    '<em>Tip: To enable real AI answers, open this file in a text editor, find <code>YOUR_OPENAI_KEY</code> and replace it with your OpenAI API key.</em></div>';
+  messages.scrollTop = messages.scrollHeight;
+}
+
+// ══════════════════════════════════════════
+// FOCUS MODE
+// ══════════════════════════════════════════
+var focusMode = false;
+function toggleFocusMode() {
+  focusMode = !focusMode;
+  document.body.classList.toggle('focus-mode', focusMode);
+  showSnack(focusMode ? '🎯 Focus Mode ON – video hidden' : '🎬 Focus Mode OFF');
+}
+
+// ══════════════════════════════════════════
+// RESIZER
+// ══════════════════════════════════════════
+(function() {
+  var resizer = document.getElementById('resizer');
+  var vp = document.getElementById('video-panel');
+  var dragging = false, startX = 0, startW = 0;
+  resizer.addEventListener('mousedown', function(e) {
+    dragging = true; startX = e.clientX; startW = vp.offsetWidth;
+    resizer.classList.add('dragging'); e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    var newW = Math.max(280, Math.min(window.innerWidth - 300, startW + (e.clientX - startX)));
+    vp.style.width = newW + 'px';
+  });
+  document.addEventListener('mouseup', function() { dragging = false; resizer.classList.remove('dragging'); });
+})();
+
+// ══════════════════════════════════════════
+// SNACKBAR
+// ══════════════════════════════════════════
+var snackTimer = null;
+function showSnack(msg) {
+  var s = document.getElementById('snackbar');
+  s.textContent = msg;
+  s.classList.add('show');
+  clearTimeout(snackTimer);
+  snackTimer = setTimeout(function() { s.classList.remove('show'); }, 3000);
+}
+
+// ══════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════
+function escapeHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ══════════════════════════════════════════
+// KEYBOARD SHORTCUTS
+// ══════════════════════════════════════════
+document.addEventListener('keydown', function(e) {
+  if ((e.ctrlKey || e.metaKey)) {
+    if (e.key === 's') { e.preventDefault(); saveNotes(); }
+    if (e.key === 'b') { e.preventDefault(); wrapText('**', '**'); }
+    if (e.key === 'i') { e.preventDefault(); wrapText('*', '*'); }
+    if (e.key === 'k') { e.preventDefault(); insertBlock('link'); }
+    if (e.key === 'm') { e.preventDefault(); stampTimestamp(); }
+    if (e.key === 'Enter') { e.preventDefault(); loadVideo(); }
+  }
+  if (e.key === 'Escape') closeSettings();
+  if (e.key === 'F11') { e.preventDefault(); toggleFocusMode(); }
+});
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', function() {
+  loadSettings();
+  var lastTitle = localStorage.getItem('studytube_last_title');
+  if (lastTitle) {
+    var saved = localStorage.getItem('studytube_notes_' + lastTitle);
+    if (saved) {
+      document.getElementById('notes-title-input').value = lastTitle;
+      document.getElementById('editor').value = saved;
+      onEditorInput();
+      document.getElementById('autosave-status').textContent = '💾 Restored from last session';
+    }
+  }
+  var lastUrl = localStorage.getItem('studytube_last_url');
+  if (lastUrl) document.getElementById('url-input').value = lastUrl;
+
+  setTimeout(function() {
+    showSnack('👋 Welcome Satyam! Ctrl+S=Save | Ctrl+M=Timestamp | F11=Focus');
+  }, 1000);
+});
+</script>
+</body>
+</html>
