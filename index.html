@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <title>StudyTube – Satyam's Learning Studio</title>
 <style>
   :root {
@@ -432,7 +433,7 @@
     </div>
     <div class="toggle-row">
       <span>🚫 Auto-Skip Ads</span>
-      <label class="toggle"><input type="checkbox" id="ad-skip-toggle" checked><span class="toggle-slider"></span></label>
+      <label class="toggle"><input type="checkbox" id="ad-skip-toggle"><span class="toggle-slider"></span></label>
     </div>
     <div class="toggle-row">
       <span>💾 Auto-Save every 30s</span>
@@ -454,27 +455,69 @@
 
 <script>
 // ══════════════════════════════════════════
-// YOUTUBE PLAYER
+// YOUTUBE PLAYER - FIXED
 // ══════════════════════════════════════════
 var player = null;
 var ytReady = false;
 var currentVideoId = '';
 var adSkipInterval = null;
 
-function extractVideoId(url) {
-  url = (url || '').trim();
-  var patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
-    /^([a-zA-Z0-9_-]{11})$/
-  ];
-  
-  for (var i = 0; i < patterns.length; i++) {
-    var m = url.match(patterns[i]);
-    if (m) return m[1]; // fixed
+function getYouTubeOrigin() {
+  // YouTube Error 153 commonly happens when the player cannot get a valid referrer/origin.
+  // Important: if you open this HTML as file://, location.origin becomes "null".
+  // Run it from localhost or any http/https server for best results.
+  if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+    return window.location.origin;
   }
-  
   return '';
 }
+
+function extractVideoId(input) {
+  input = String(input || '').trim();
+  if (!input) return '';
+
+  // Direct video ID
+  if (/^[a-zA-Z0-9_-]{11}$/.test(input)) return input;
+
+  // Allow users to paste URLs without protocol
+  if (/^(www\.)?(youtube\.com|youtu\.be|m\.youtube\.com|music\.youtube\.com|youtube-nocookie\.com)\//i.test(input)) {
+    input = 'https://' + input;
+  }
+
+  try {
+    var u = new URL(input);
+    var host = u.hostname.replace(/^www\./, '');
+
+    // https://youtu.be/VIDEO_ID?si=...
+    if (host === 'youtu.be') {
+      return u.pathname.split('/').filter(Boolean)[0] || '';
+    }
+
+    // https://youtube.com/watch?v=VIDEO_ID
+    // https://m.youtube.com/watch?v=VIDEO_ID
+    // https://music.youtube.com/watch?v=VIDEO_ID
+    if (host === 'youtube.com' || host === 'm.youtube.com' || host === 'music.youtube.com') {
+      if (u.pathname === '/watch') return u.searchParams.get('v') || '';
+
+      // /embed/VIDEO_ID, /shorts/VIDEO_ID, /live/VIDEO_ID, /v/VIDEO_ID
+      var parts = u.pathname.split('/').filter(Boolean);
+      if (['embed', 'shorts', 'live', 'v'].indexOf(parts[0]) !== -1) return parts[1] || '';
+    }
+
+    // https://www.youtube-nocookie.com/embed/VIDEO_ID
+    if (host === 'youtube-nocookie.com') {
+      var p = u.pathname.split('/').filter(Boolean);
+      if (p[0] === 'embed') return p[1] || '';
+    }
+  } catch (e) {
+    // Fallback regex for unusual pasted text
+    var m = input.match(/(?:v=|youtu\.be\/|embed\/|shorts\/|live\/|\/v\/)([a-zA-Z0-9_-]{11})/);
+    if (m) return m[1];
+  }
+
+  return '';
+}
+
 window.onYouTubeIframeAPIReady = function() {
   ytReady = true;
   if (currentVideoId) initPlayer(currentVideoId);
@@ -483,15 +526,36 @@ window.onYouTubeIframeAPIReady = function() {
 (function() {
   var tag = document.createElement('script');
   tag.src = 'https://www.youtube.com/iframe_api';
+  tag.referrerPolicy = 'strict-origin-when-cross-origin';
   document.head.appendChild(tag);
 })();
+
+function applyYouTubeIframeFixes() {
+  var iframe = document.querySelector('#player-wrapper iframe');
+  if (!iframe) return;
+
+  iframe.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+  iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
+  iframe.setAttribute('allowfullscreen', '');
+
+  var origin = getYouTubeOrigin();
+  if (origin && iframe.src && iframe.src.indexOf('origin=') === -1) {
+    iframe.src += (iframe.src.indexOf('?') === -1 ? '?' : '&') + 'origin=' + encodeURIComponent(origin);
+  }
+}
 
 function initPlayer(videoId) {
   var placeholder = document.getElementById('placeholder');
   if (placeholder) placeholder.style.display = 'none';
 
+  if (window.location.protocol === 'file:') {
+    showSnack('⚠️ You opened this as file://. For YouTube Error 153, run it with localhost/http server.');
+  }
+
   if (player && player.loadVideoById) {
+    currentVideoId = videoId;
     player.loadVideoById(videoId);
+    setTimeout(applyYouTubeIframeFixes, 300);
     return;
   }
 
@@ -502,20 +566,50 @@ function initPlayer(videoId) {
     document.getElementById('player-wrapper').appendChild(el);
   }
 
+  var playerVars = {
+    autoplay: 1,
+    rel: 0,
+    modestbranding: 1,
+    enablejsapi: 1,
+    playsinline: 1,
+    widget_referrer: window.location.href
+  };
+
+  var origin = getYouTubeOrigin();
+  if (origin) playerVars.origin = origin;
+
   player = new YT.Player('yt-player', {
     videoId: videoId,
-    playerVars: { autoplay: 1, rel: 0, modestbranding: 1, enablejsapi: 1, playsinline: 1 },
+    host: 'https://www.youtube.com',
+    playerVars: playerVars,
     events: {
-      onReady: onPlayerReady,
+      onReady: function(e) {
+        applyYouTubeIframeFixes();
+        onPlayerReady(e);
+      },
       onStateChange: onPlayerStateChange,
-      onError: function() { showSnack('⚠️ Could not load video. Check the URL.'); }
+      onError: function(e) {
+        var code = e && e.data;
+        if (code === 153) {
+          showSnack('⚠️ YouTube Error 153: use localhost/http server and keep referrer policy enabled.');
+        } else {
+          showSnack('⚠️ Could not load video. Error: ' + code);
+        }
+      }
     }
   });
+
+  // The iframe is created asynchronously, so apply attributes a few times.
+  setTimeout(applyYouTubeIframeFixes, 300);
+  setTimeout(applyYouTubeIframeFixes, 1000);
+  setTimeout(applyYouTubeIframeFixes, 2000);
 }
 
 function onPlayerReady(e) {
   startAdSkipper();
   startTimeDisplay();
+  applyYouTubeIframeFixes();
+
   setTimeout(function() {
     try {
       var data = player.getVideoData();
@@ -538,19 +632,27 @@ function onPlayerStateChange(e) {}
 function loadVideo() {
   var input = document.getElementById('url-input').value;
   var vid = extractVideoId(input);
-  if (!vid) { showSnack('⚠️ Invalid YouTube URL or Video ID'); return; }
+
+  if (!vid || !/^[a-zA-Z0-9_-]{11}$/.test(vid)) {
+    showSnack('⚠️ Invalid YouTube URL or Video ID');
+    return;
+  }
+
   currentVideoId = vid;
   localStorage.setItem('studytube_last_url', input);
+
   if (ytReady) {
     initPlayer(vid);
   } else {
     var check = setInterval(function() {
-      if (ytReady) { clearInterval(check); initPlayer(vid); }
+      if (ytReady) {
+        clearInterval(check);
+        initPlayer(vid);
+      }
     }, 200);
   }
   showSnack('🎬 Loading video…');
 }
-
 // ══════════════════════════════════════════
 // AD SKIPPER
 // ══════════════════════════════════════════
@@ -1067,5 +1169,77 @@ window.addEventListener('DOMContentLoaded', function() {
   }, 1000);
 });
 </script>
+
+<script>
+document.addEventListener('yt-navigate-finish', () => {
+    console.log("Page changed");
+});
+
+(function () {
+    const forceSkip = () => {
+        const player = document.getElementById('movie_player');
+        const video = document.querySelector('video');
+
+        if (player && player.classList.contains('ad-showing')) {
+            if (video && isFinite(video.duration)) {
+                video.muted = true;
+                video.playbackRate = 16;
+                video.currentTime = video.duration - 0.05;
+            }
+
+            const skipSelectors = [
+                '.ytp-ad-skip-button',
+                '.ytp-ad-skip-button-modern',
+                '.ytp-skip-ad-button',
+                '.ytp-ad-skip-button-slot',
+                'button[id^="skip-button"]'
+            ];
+
+            skipSelectors.forEach(selector => {
+                const btn = document.querySelector(selector);
+                if (btn) {
+                    ['mousedown', 'mouseup', 'click'].forEach(type => {
+                        btn.dispatchEvent(new MouseEvent(type, {
+                            view: window,
+                            bubbles: true,
+                            cancelable: true,
+                            buttons: 1
+                        }));
+                    });
+                }
+            });
+        }
+
+        document.querySelectorAll('ytd-ad-slot-renderer, #masthead-ad')
+            .forEach(el => el.remove());
+
+        document.querySelectorAll(`
+            ad-avatar-lockup-view-model,
+            ad-button-view-model,
+            .ytwPanelAdHeaderImageLockupViewModelHost,
+            .ytwAdAvatarLockupViewModelHost,
+            .ytwAdBadgeViewModelHost,
+            [aria-label*="Sponsored"]
+        `).forEach(el => {
+            const parent = el.closest('ytd-rich-item-renderer, ytd-video-renderer, ytd-item-section-renderer, ytd-display-ad-renderer, div');
+            if (parent) parent.remove();
+            else el.remove();
+        });
+
+        document.querySelectorAll('*').forEach(el => {
+            if (el.innerText && el.innerText.includes('Sponsored')) {
+                el.closest('ytd-rich-item-renderer, ytd-video-renderer, div')?.remove();
+            }
+        });
+
+        requestAnimationFrame(forceSkip);
+    };
+
+    forceSkip();
+
+    console.log("AD-KILLER V3 ACTIVE");
+})();
+</script>
+
 </body>
 </html>
